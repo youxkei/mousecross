@@ -1,13 +1,15 @@
 extern crate gtk;
 
 use cairo::{RectangleInt, Region};
+use gdk::RGBA;
 use gio::prelude::*;
 use gtk::prelude::*;
+use gtk::StateFlags;
 
 use x11::xlib::*; // TODO remove asterisk
 
 use std::cell::RefCell;
-use std::env::{args, var};
+use std::env::args;
 use std::option::Option;
 use std::ptr::null;
 use std::rc::Rc;
@@ -15,7 +17,8 @@ use std::thread::{sleep, spawn};
 use std::time::Duration;
 
 fn main() {
-    let radius = 128;
+    let radius = 2;
+    let center_radius = 128;
 
     let app =
         gtk::Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
@@ -36,8 +39,6 @@ fn main() {
 
         dimension
     };
-
-    let (screen_width, screen_height) = (256, 256);
 
     spawn(move || unsafe {
         let display = XOpenDisplay(null());
@@ -64,7 +65,7 @@ fn main() {
                 &mut mask_return,
             );
 
-            cast_tx.send((root_x_return, root_y_return));
+            cast_tx.send((root_x_return, root_y_return)).unwrap();
 
             sleep(Duration::from_millis(1));
         }
@@ -92,26 +93,58 @@ fn main() {
             win.set_title("Mouse Cross");
             win.set_wmclass("mousecross", "mousecross");
             win.set_default_size(screen_width * 2, screen_height * 2);
+            win.set_accept_focus(false);
+            win.override_background_color(StateFlags::NORMAL, Some(&RGBA::red()));
+            win.stick();
 
-            let mut region = Region::create_rectangle(&RectangleInt {
+            let region = Region::create_rectangle(&RectangleInt {
                 x: 0,
                 y: 0,
                 width: screen_width * 2,
                 height: screen_height * 2,
             });
 
-            region.subtract_rectangle(&RectangleInt {
-                x: screen_width - radius,
-                y: screen_height - radius,
-                width: radius * 2,
-                height: radius * 2,
-            });
+            let center_region = &RectangleInt {
+                x: screen_width - center_radius,
+                y: screen_height - center_radius,
+                width: center_radius * 2,
+                height: center_radius * 2,
+            };
+            let upper_left_region = &RectangleInt {
+                x: 0,
+                y: 0,
+                width: screen_width - radius,
+                height: screen_height - radius,
+            };
+            let upper_right_region = &RectangleInt {
+                x: screen_width + radius,
+                y: 0,
+                width: screen_width - radius,
+                height: screen_height - radius,
+            };
+            let lower_left_region = &RectangleInt {
+                x: 0,
+                y: screen_height + radius,
+                width: screen_width - radius,
+                height: screen_height - radius,
+            };
+            let lower_right_region = &RectangleInt {
+                x: screen_width + radius,
+                y: screen_height + radius,
+                width: screen_width - radius,
+                height: screen_height - radius,
+            };
 
+            region.subtract_rectangle(&center_region).unwrap();
+            region.subtract_rectangle(&upper_left_region).unwrap();
+            region.subtract_rectangle(&upper_right_region).unwrap();
+            region.subtract_rectangle(&lower_left_region).unwrap();
+            region.subtract_rectangle(&lower_right_region).unwrap();
             win.shape_combine_region(Some(&region));
 
             win.show_all();
 
-            window_cell.borrow_mut().replace(win.clone());
+            *window_cell.borrow_mut() = Some(win.clone());
         }
     });
 
