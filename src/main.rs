@@ -3,7 +3,8 @@ extern crate gtk;
 use cairo::{RectangleInt, Region};
 use gio::prelude::*;
 use gtk::prelude::*;
-use x11::xlib::{XDefaultRootWindow, XOpenDisplay, XQueryPointer};
+
+use x11::xlib::*; // TODO remove asterisk
 
 use std::cell::RefCell;
 use std::env::{args, var};
@@ -14,11 +15,29 @@ use std::thread::{sleep, spawn};
 use std::time::Duration;
 
 fn main() {
+    let radius = 128;
+
     let app =
         gtk::Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
 
     glib::MainContext::default().acquire();
     let (cast_tx, cast_rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+
+    let (screen_width, screen_height) = unsafe {
+        let display = XOpenDisplay(null());
+        let screen = XDefaultScreen(display);
+
+        let dimension = (
+            XDisplayWidth(display, screen),
+            XDisplayHeight(display, screen),
+        );
+
+        XCloseDisplay(display);
+
+        dimension
+    };
+
+    let (screen_width, screen_height) = (256, 256);
 
     spawn(move || unsafe {
         let display = XOpenDisplay(null());
@@ -56,9 +75,9 @@ fn main() {
     cast_rx.attach(None, {
         let window_cell = window_cell.clone();
         move |(x, y)| {
-            match &*window_cell.borrow_mut() {
+            match &*window_cell.borrow() {
                 None => {}
-                Some(window) => window.move_(x, y),
+                Some(window) => window.move_(x - screen_width, y - screen_height),
             }
 
             glib::Continue(true)
@@ -71,23 +90,24 @@ fn main() {
         move |app| {
             let win = gtk::ApplicationWindow::new(app);
             win.set_title("Mouse Cross");
+            win.set_wmclass("mousecross", "mousecross");
+            win.set_default_size(screen_width * 2, screen_height * 2);
 
-            let rectangles = &[
-                RectangleInt {
-                    x: 10,
-                    y: 10,
-                    width: 128,
-                    height: 128,
-                },
-                RectangleInt {
-                    x: 64,
-                    y: 64,
-                    width: 128,
-                    height: 128,
-                },
-            ];
+            let mut region = Region::create_rectangle(&RectangleInt {
+                x: 0,
+                y: 0,
+                width: screen_width * 2,
+                height: screen_height * 2,
+            });
 
-            win.shape_combine_region(Some(&Region::create_rectangles(rectangles)));
+            region.subtract_rectangle(&RectangleInt {
+                x: screen_width - radius,
+                y: screen_height - radius,
+                width: radius * 2,
+                height: radius * 2,
+            });
+
+            win.shape_combine_region(Some(&region));
 
             win.show_all();
 
