@@ -3,10 +3,14 @@ extern crate gtk;
 use cairo::{RectangleInt, Region};
 use gdk::RGBA;
 use gio::prelude::*;
+use glib::MainContext;
 use gtk::prelude::*;
-use gtk::StateFlags;
+use gtk::{Application, StateFlags};
 
-use x11::xlib::*; // TODO remove asterisk
+use x11::xlib::{
+    XCloseDisplay, XDefaultRootWindow, XDefaultScreen, XDisplayHeight, XDisplayWidth, XOpenDisplay,
+    XQueryPointer,
+};
 
 use std::cell::RefCell;
 use std::env::args;
@@ -20,10 +24,9 @@ fn main() {
     let radius = 2;
     let center_radius = 128;
 
-    let app =
-        gtk::Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
+    let app = Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
 
-    glib::MainContext::default().acquire();
+    MainContext::default().acquire();
     let (cast_tx, cast_rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     let (screen_width, screen_height) = unsafe {
