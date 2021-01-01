@@ -1,11 +1,10 @@
 extern crate gtk;
 
 use cairo::{RectangleInt, Region};
-use gdk::RGBA;
 use gio::prelude::*;
 use glib::MainContext;
 use gtk::prelude::*;
-use gtk::{Application, StateFlags};
+use gtk::{Application, CssProvider};
 
 use x11::xlib::{
     XCloseDisplay, XDefaultRootWindow, XDefaultScreen, XDisplayHeight, XDisplayWidth, XOpenDisplay,
@@ -97,8 +96,14 @@ fn main() {
             win.set_wmclass("mousecross", "mousecross");
             win.set_default_size(screen_width * 2, screen_height * 2);
             win.set_accept_focus(false);
-            win.override_background_color(StateFlags::NORMAL, Some(&RGBA::red()));
             win.stick();
+
+            let css_provider = CssProvider::new();
+            css_provider
+                .load_from_data(b"window { background-color: rgb(255, 0, 0); }")
+                .unwrap();
+            win.get_style_context()
+                .add_provider(&css_provider, std::u32::MAX);
 
             let region = Region::create_rectangle(&RectangleInt {
                 x: 0,
