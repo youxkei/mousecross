@@ -20,8 +20,9 @@ use std::thread::{sleep, spawn};
 use std::time::Duration;
 
 fn main() {
-    let radius = 2;
-    let center_radius = 128;
+    let radius = 64;
+    let width = 2;
+    let center_radius = 256;
 
     let app = Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
 
@@ -118,36 +119,64 @@ fn main() {
                 width: center_radius * 2,
                 height: center_radius * 2,
             };
-            let upper_left_region = &RectangleInt {
+            let top_left_region = &RectangleInt {
                 x: 0,
                 y: 0,
                 width: screen_width - radius,
                 height: screen_height - radius,
             };
-            let upper_right_region = &RectangleInt {
+            let top_right_region = &RectangleInt {
                 x: screen_width + radius,
                 y: 0,
                 width: screen_width - radius,
                 height: screen_height - radius,
             };
-            let lower_left_region = &RectangleInt {
+            let bottom_left_region = &RectangleInt {
                 x: 0,
                 y: screen_height + radius,
                 width: screen_width - radius,
                 height: screen_height - radius,
             };
-            let lower_right_region = &RectangleInt {
+            let bottom_right_region = &RectangleInt {
                 x: screen_width + radius,
                 y: screen_height + radius,
                 width: screen_width - radius,
                 height: screen_height - radius,
+            };
+            let top_region = &RectangleInt {
+                x: screen_width - radius + width,
+                y: 0,
+                width: (radius - width) * 2,
+                height: screen_height - center_radius - width,
+            };
+            let bottom_region = &RectangleInt {
+                x: screen_width - radius + width,
+                y: screen_height + center_radius + width,
+                width: (radius - width) * 2,
+                height: screen_height - center_radius - width,
+            };
+            let left_region = &RectangleInt {
+                x: 0,
+                y: screen_height - radius + width,
+                width: screen_width - center_radius - width,
+                height: (radius - width) * 2,
+            };
+            let right_region = &RectangleInt {
+                x: screen_width + center_radius + width,
+                y: screen_height - radius + width,
+                width: screen_width - center_radius - width,
+                height: (radius - width) * 2,
             };
 
             region.subtract_rectangle(&center_region).unwrap();
-            region.subtract_rectangle(&upper_left_region).unwrap();
-            region.subtract_rectangle(&upper_right_region).unwrap();
-            region.subtract_rectangle(&lower_left_region).unwrap();
-            region.subtract_rectangle(&lower_right_region).unwrap();
+            region.subtract_rectangle(&top_left_region).unwrap();
+            region.subtract_rectangle(&top_right_region).unwrap();
+            region.subtract_rectangle(&bottom_left_region).unwrap();
+            region.subtract_rectangle(&bottom_right_region).unwrap();
+            region.subtract_rectangle(&top_region).unwrap();
+            region.subtract_rectangle(&bottom_region).unwrap();
+            region.subtract_rectangle(&left_region).unwrap();
+            region.subtract_rectangle(&right_region).unwrap();
             win.shape_combine_region(Some(&region));
 
             win.show_all();
