@@ -13,6 +13,7 @@ use x11::xlib::{
 
 use std::cell::RefCell;
 use std::env::args;
+use std::ops::Deref;
 use std::option::Option;
 use std::ptr::null;
 use std::rc::Rc;
@@ -24,13 +25,19 @@ fn main() {
     let width = 2;
     let center_radius = 256;
 
-    let app = Application::new(Some("io.github.youxkei.mousecross"), Default::default()).unwrap();
+    let app = Application::new(Some("io.github.youxkei.mousecross"), Default::default())
+        .expect("Failed to start GTK application");
 
     MainContext::default().acquire();
     let (cast_tx, cast_rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     let (screen_width, screen_height) = unsafe {
         let display = XOpenDisplay(null());
+
+        if display.is_null() {
+            panic!("Failed to open display");
+        }
+
         let screen = XDefaultScreen(display);
 
         let dimension = (
@@ -45,6 +52,11 @@ fn main() {
 
     spawn(move || unsafe {
         let display = XOpenDisplay(null());
+
+        if display.is_null() {
+            panic!("Failed to open display");
+        }
+
         let root_window = XDefaultRootWindow(display);
 
         loop {
@@ -79,7 +91,7 @@ fn main() {
     cast_rx.attach(None, {
         let window_cell = window_cell.clone();
         move |(x, y)| {
-            match &*window_cell.borrow() {
+            match window_cell.borrow().deref() {
                 None => {}
                 Some(window) => window.move_(x - screen_width, y - screen_height),
             }
