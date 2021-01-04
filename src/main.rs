@@ -12,7 +12,8 @@ use x11::xlib::{
 };
 
 use std::cell::RefCell;
-use std::env::args;
+use std::env::{args, vars};
+use std::ffi::CString;
 use std::ops::Deref;
 use std::option::Option;
 use std::ptr::null;
@@ -21,6 +22,8 @@ use std::thread::{sleep, spawn};
 use std::time::Duration;
 
 fn main() {
+    println!("{:?}", vars().collect::<Vec<_>>());
+
     let radius = 64;
     let width = 2;
     let center_radius = 256;
@@ -32,7 +35,8 @@ fn main() {
     let (cast_tx, cast_rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
     let (screen_width, screen_height) = unsafe {
-        let display = XOpenDisplay(null());
+        let display_name = CString::new(":0").unwrap();
+        let display = XOpenDisplay(display_name.as_ptr());
 
         if display.is_null() {
             panic!("Failed to open display");
